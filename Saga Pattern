@@ -1,0 +1,67 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# Simulating a database
+orders = {}
+
+# Simulated services with compensation actions
+def process_payment(order_id):
+    if orders[order_id]['payment_successful']:
+        return True
+    if order_id % 2 == 0:  # Simulating failure for some orders
+        return False
+    orders[order_id]['payment_successful'] = True
+    return True
+
+def rollback_payment(order_id):
+    orders[order_id]['payment_successful'] = False
+
+def reserve_inventory(order_id):
+    if orders[order_id]['inventory_reserved']:
+        return True
+    if order_id % 3 == 0:  # Simulating failure
+        return False
+    orders[order_id]['inventory_reserved'] = True
+    return True
+
+def rollback_inventory(order_id):
+    orders[order_id]['inventory_reserved'] = False
+
+def ship_order(order_id):
+    if orders[order_id]['shipped']:
+        return True
+    if order_id % 5 == 0:  # Simulating failure
+        return False
+    orders[order_id]['shipped'] = True
+    return True
+
+def rollback_shipping(order_id):
+    orders[order_id]['shipped'] = False
+
+# Saga Orchestrator
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    order_id = len(orders) + 1
+    orders[order_id] = {
+        'payment_successful': False,
+        'inventory_reserved': False,
+        'shipped': False
+    }
+    
+    if not process_payment(order_id):
+        return jsonify({'status': 'failed', 'message': 'Payment failed'}), 400
+    
+    if not reserve_inventory(order_id):
+        rollback_payment(order_id)
+        return jsonify({'status': 'failed', 'message': 'Inventory reservation failed'}), 400
+    
+    if not ship_order(order_id):
+        rollback_inventory(order_id)
+        rollback_payment(order_id)
+        return jsonify({'status': 'failed', 'message': 'Shipping failed'}), 400
+    
+    return jsonify({'status': 'success', 'message': 'Order completed successfully', 'order_id': order_id})
+
+if __name__ == '__main__':
+    app.run(debug=True)
