@@ -1,0 +1,49 @@
+-- Create nodes representing components of Global Student Portal
+CREATE (:Component {name: 'AuthService'})
+CREATE (:Component {name: 'UserService'})
+CREATE (:Component {name: 'PaymentService'})
+CREATE (:Component {name: 'NotificationService'})
+CREATE (:Component {name: 'ReportingService'})
+
+-- Create relationships representing dependencies
+MATCH (auth:Component {name: 'AuthService'}), (user:Component {name: 'UserService'})
+CREATE (auth)-[:DEPENDS_ON]->(user);
+
+MATCH (user:Component {name: 'UserService'}), (payment:Component {name: 'PaymentService'})
+CREATE (user)-[:DEPENDS_ON]->(payment);
+
+MATCH (payment:Component {name: 'PaymentService'}), (notification:Component {name: 'NotificationService'})
+CREATE (payment)-[:DEPENDS_ON]->(notification);
+
+MATCH (notification:Component {name: 'NotificationService'}), (reporting:Component {name: 'ReportingService'})
+CREATE (notification)-[:DEPENDS_ON]->(reporting);
+
+-- Calculate Fan-in (incoming dependencies) for each component
+MATCH (c:Component)
+OPTIONAL MATCH (d)-[:DEPENDS_ON]->(c)
+WITH c, COUNT(d) AS fan_in
+SET c.fan_in = fan_in;
+
+-- Calculate Fan-out (outgoing dependencies) for each component
+MATCH (c:Component)
+OPTIONAL MATCH (c)-[:DEPENDS_ON]->(d)
+WITH c, COUNT(d) AS fan_out
+SET c.fan_out = fan_out;
+
+-- Calculate Instability (I = fan_out / (fan_in + fan_out))
+MATCH (c:Component)
+WITH c, c.fan_in AS fan_in, c.fan_out AS fan_out
+WITH c, fan_in, fan_out, 
+     CASE WHEN (fan_in + fan_out) = 0 THEN 0 ELSE (toFloat(fan_out) / (fan_in + fan_out)) END AS instability
+SET c.instability = instability;
+
+-- Retrieve stability metrics as a markdown table
+CALL {
+    RETURN '| Component | Fan-in | Fan-out | Instability |' AS row
+    UNION ALL
+    RETURN '|---|---|---|---|' AS row
+    UNION ALL
+    MATCH (c:Component)
+    RETURN '| ' + c.name + ' | ' + c.fan_in + ' | ' + c.fan_out + ' | ' + c.instability + ' |' AS row
+}
+RETURN row;
