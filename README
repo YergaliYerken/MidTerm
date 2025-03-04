@@ -1,0 +1,39 @@
+# Global Student Portal Dependency Graph in Neo4j
+
+This project sets up a Neo4j database to analyze software dependencies and calculate stability metrics using Cypher queries.
+
+## Setup
+
+1. **Install Docker and Docker Compose**
+   - Ensure you have Docker installed: [Docker Install](https://docs.docker.com/get-docker/)
+   - Ensure you have Docker Compose installed.
+
+2. **Run Neo4j**
+   ```sh
+   docker-compose up -d
+   ```
+   This starts a Neo4j container accessible at [http://localhost:7474](http://localhost:7474) with the credentials `neo4j/test123`.
+
+3. **Load Dependency Graph**
+   - Open Neo4j Browser and execute the Cypher script from `neo4j_stability_metrics.cypher` to create nodes and relationships.
+
+4. **Run Stability Metric Queries**
+   - The Cypher script includes queries to compute Fan-in, Fan-out, and Instability.
+   - Results are formatted as a Markdown table.
+
+## Queries
+- **Create Components and Dependencies**
+- **Compute Fan-in (incoming dependencies)**
+- **Compute Fan-out (outgoing dependencies)**
+- **Compute Instability (I = fan_out / (fan_in + fan_out))**
+
+## Example Output
+```
+| Component | Fan-in | Fan-out | Instability |
+|---|---|---|---|
+| AuthService | 0 | 1 | 1.0 |
+| UserService | 1 | 1 | 0.5 |
+| PaymentService | 1 | 1 | 0.5 |
+| NotificationService | 1 | 1 | 0.5 |
+| ReportingService | 1 | 0 | 0.0 |
+```
